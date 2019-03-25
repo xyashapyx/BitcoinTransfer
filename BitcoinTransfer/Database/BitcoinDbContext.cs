@@ -1,19 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using BitcoinTransfer.Models;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BitcoinTransfer.Database
 {
     public class BitcoinDbContext : DbContext
     {
         private readonly string connectionString;
-        public DbSet<WalletModel> Blogs { get; set; }
+        public DbSet<WalletModel> Wallets { get; set; }
         public DbSet<TransactionModel> Transactions { get; set; }
 
         public BitcoinDbContext(IConfiguration configuration)
@@ -37,6 +36,19 @@ namespace BitcoinTransfer.Database
 
                 return new BitcoinDbContext(config);
             }
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<WalletModel>().HasData(
+                new WalletModel
+                {
+                    WalletId = Consts.defaultAddressIdToGetBitcoins,
+                    Address = Consts.defaultAddressToGetBitcoin,
+                    PrivateKey = Consts.defaultSecretToGetBitcoin
+                }
+            );
         }
     }
 }
