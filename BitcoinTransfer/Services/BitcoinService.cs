@@ -89,6 +89,21 @@ namespace BitcoinTransfer.Services
             var broadcastResponse = client.Broadcast(transaction).Result;
             if (!broadcastResponse.Success)
                 throw new Exception("Error broadcasting transaction " + broadcastResponse.Error.ErrorCode + " : " + broadcastResponse.Error.Reason);
+            var transactionId = transaction.GetHashCode().ToString();
+
+            var receiver = await _walletRepository.GetOrCreate(toAddress);
+
+            _transactionRepository.Create(new TransactionModel
+            {
+                Amount = amount,
+                Confirmation = 0,
+                CreatedDate = DateTime.UtcNow,
+                FromWalletId = fromWallet.WalletId,
+                TransactionId = transactionId,
+                ToWalletId = receiver.WalletId
+            });
+            await _transactionRepository.SaveAsync();
+            await UpdateBalance(fromWallet, receiver, ssIsTestNet);
             return transaction.GetHash().ToString();
         }
 
@@ -121,6 +136,28 @@ namespace BitcoinTransfer.Services
                 var transaction = await client.GetTransaction(uint256.Parse(transactionModel.TransactionId));
                 transactionModel.Confirmation = transaction.Block.Confirmations;
             }
-        }        
+        }
+
+        private async Task UpdateBalance(WalletModel fromWallet, WalletModel toWallet, bool testNet = false)
+        {
+            var fromWalletBalance = await MssGetBalance(fromWallet.Address, true, testNet);
+            var toWalletBalance = await MssGetBalance(fromWallet.Address, true, testNet);
+            var balanceChanged = false;
+            if (fromWallet.ConfirmedBalance != fromWalletBalance.Confirmed)
+            {
+                fromWallet.ConfirmedBalance = fromWalletBalance.Confirmed;
+                _walletRepository.Update(fromWallet);
+                balanceChanged = true;
+            }
+            if (toWallet.ConfirmedBalance != toWalletBalance.Confirmed)
+            {
+                toWallet.ConfirmedBalance = toWalletBalance.Confirmed;
+                _walletRepository.Update(toWallet);
+                balanceChanged = true;
+            }
+
+            if (balanceChanged)
+                await _walletRepository.SaveAsync();
+        }
     }
 }

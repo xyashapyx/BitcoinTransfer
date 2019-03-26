@@ -18,7 +18,7 @@ namespace BitcoinTransfer.Models
 
         public long ToWalletId { get; set; }
 
-        public double Amount { get; set; }
+        public decimal Amount { get; set; }
 
         public int Confirmation { get; set; }
 

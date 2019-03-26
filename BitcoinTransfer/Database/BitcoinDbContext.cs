@@ -15,29 +15,11 @@ namespace BitcoinTransfer.Database
         public DbSet<WalletModel> Wallets { get; set; }
         public DbSet<TransactionModel> Transactions { get; set; }
 
-        public BitcoinDbContext(IConfiguration configuration)
+        public BitcoinDbContext(DbContextOptions<BitcoinDbContext> options)
+            : base(options)
         {
-            this.connectionString = configuration.GetConnectionString("BitcoinInfoDb");
-
         }
-
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-            => optionsBuilder.UseSqlServer(connectionString);
-
-        public class DesignTimeActivitiesDbContextFactory : IDesignTimeDbContextFactory<BitcoinDbContext>
-        {
-            public BitcoinDbContext CreateDbContext(string[] args)
-            {
-                var builder = new ConfigurationBuilder()
-                    .SetBasePath(Path.Combine(Directory.GetCurrentDirectory()))
-                    .AddJsonFile("appsettings.json", optional: false);
-
-                var config = builder.Build();
-
-                return new BitcoinDbContext(config);
-            }
-        }
-
+        
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

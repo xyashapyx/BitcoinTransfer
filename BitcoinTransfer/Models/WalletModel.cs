@@ -13,6 +13,6 @@ namespace BitcoinTransfer.Models
 
         public string PrivateKey { get; set; }
 
-        public double ConfirmedBalance { get; set; }
+        public decimal ConfirmedBalance { get; set; }
     }
 }

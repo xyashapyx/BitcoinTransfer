@@ -6,5 +6,6 @@ namespace BitcoinTransfer.Interfaces.Repositories
     public interface IWalletRepository : IRepositoryBase<WalletModel>
     {
         Task<WalletModel> GetDefaultWalletToSendBitcoins();
+        Task<WalletModel> GetOrCreate(string address);
     }
 }

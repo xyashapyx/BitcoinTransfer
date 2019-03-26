@@ -25,17 +25,14 @@ namespace BitcoinTransfer
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddDbContext<BitcoinDbContext>(options => options.UseSqlServer(Configuration.GetConnectionString("BitcoinDb")));
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
+     
             services.AddAutoMapper();
 
-            services.AddSingleton(typeof(IBitcoinService), typeof(BitcoinService));
             services.AddTransient(typeof(ITransactionRepository), typeof(TransactionRepository));
             services.AddTransient(typeof(IWalletRepository), typeof(WalletRepository));
-
-            var connection = @"Server=(localdb)\mssqllocaldb;Database=BitcoinTransfer.BitcoinInfoDB;Trusted_Connection=True;ConnectRetryCount=0";
-            services.AddDbContext<BitcoinDbContext>
-                (options => options.UseSqlServer(connection));
-
+            services.AddTransient(typeof(IBitcoinService), typeof(BitcoinService));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

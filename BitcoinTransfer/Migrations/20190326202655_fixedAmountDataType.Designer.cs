@@ -4,14 +4,16 @@ using BitcoinTransfer.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace BitcoinTransfer.Migrations
 {
     [DbContext(typeof(BitcoinDbContext))]
-    partial class BitcoinDbContextModelSnapshot : ModelSnapshot
+    [Migration("20190326202655_fixedAmountDataType")]
+    partial class fixedAmountDataType
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -52,7 +54,7 @@ namespace BitcoinTransfer.Migrations
 
                     b.Property<string>("Address");
 
-                    b.Property<decimal>("ConfirmedBalance");
+                    b.Property<double>("ConfirmedBalance");
 
                     b.Property<string>("PrivateKey");
 
@@ -65,7 +67,7 @@ namespace BitcoinTransfer.Migrations
                         {
                             WalletId = 1L,
                             Address = "miudc6pyYwdVTxuDYCNdsJDESxUZz3wGKq",
-                            ConfirmedBalance = 0m,
+                            ConfirmedBalance = 0.0,
                             PrivateKey = "cPK1Gssv5UD79shik4yoCqpXUuYXoMArwEGjPPfzXHVnzZCRZErm"
                         });
                 });
