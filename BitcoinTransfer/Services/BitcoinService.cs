@@ -3,13 +3,20 @@ using NBitcoin;
 using QBitNinja.Client;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using AutoMapper;
 using BitcoinTransfer.Interfaces.Repositories;
 using BitcoinTransfer.Interfaces.Services;
 using BitcoinTransfer.ViewModels;
+using Newtonsoft.Json;
+using QBitNinja.Client.Models;
 using ITransactionRepository = BitcoinTransfer.Interfaces.Repositories.ITransactionRepository;
+using WalletModel = BitcoinTransfer.Models.WalletModel;
 
 namespace BitcoinTransfer.Services
 {
@@ -18,12 +25,14 @@ namespace BitcoinTransfer.Services
         private readonly ITransactionRepository _transactionRepository;
         private readonly IWalletRepository _walletRepository;
         private readonly IMapper _mapper;
+        private readonly HttpClientService _httpClientService;
 
         public BitcoinService(ITransactionRepository transactionRepository, IWalletRepository walletRepository, IMapper mapper)
         {
             _transactionRepository = transactionRepository;
             _walletRepository = walletRepository;
             _mapper = mapper;
+            _httpClientService = new HttpClientService();
         }
         public async Task<IEnumerable<LastTransactionModel>> ProcessGetLast()
         {
@@ -42,8 +51,8 @@ namespace BitcoinTransfer.Services
             var transaction = Transaction.Create(net);
             var bitcoinPrivateKey = new BitcoinSecret(fromWallet.PrivateKey);
             var fromAddress = bitcoinPrivateKey.GetAddress().ToString();
-            var totalBalance = await MssGetBalance(fromAddress, true, ssIsTestNet);
-            if (totalBalance.Confirmed <= amount)
+            var totalBalance = await GetBalance(fromAddress);
+            if (totalBalance <= amount)
                 throw new Exception("The address doesn't have enough funds!");
             var client = new QBitNinjaClient(net);
             var balance = client.GetBalance(new BitcoinPubKeyAddress(fromAddress), true).Result;
@@ -72,7 +81,7 @@ namespace BitcoinTransfer.Services
             };
             transaction.Outputs.Add(toAddressTxOut);
             //add address to send change
-            var change = totalBalance.Unconfirmed - amount;
+            var change = totalBalance - amount;
             if (change > 0)
             {
                 var fromPubKeyAddress = new BitcoinPubKeyAddress(fromAddress);
@@ -103,30 +112,9 @@ namespace BitcoinTransfer.Services
                 ToWalletId = receiver.WalletId
             });
             await _transactionRepository.SaveAsync();
-            await UpdateBalance(fromWallet, receiver, ssIsTestNet);
+            await UpdateBalance(fromWallet, receiver);
             return transaction.GetHash().ToString();
-        }
-
-        private async Task<Balance> MssGetBalance(string ssAddress, bool ssIsUnspentOnly, bool ssIsTestNet)
-        {
-            var net = ssIsTestNet ? Network.TestNet : Network.Main;
-            var client = new QBitNinjaClient(net);
-            var balance = await client.GetBalance(new BitcoinPubKeyAddress(ssAddress), ssIsUnspentOnly);
-            var totalBalance = new Balance();
-            if (balance.Operations.Count <= 0)
-                return totalBalance;
-            var unspentCoins = new List<Coin>();
-            var unspentCoinsConfirmed = new List<Coin>();
-            foreach (var operation in balance.Operations)
-            {
-                unspentCoins.AddRange(operation.ReceivedCoins.Select(coin => coin as Coin));
-                if (operation.Confirmations > 0)
-                    unspentCoinsConfirmed.AddRange(operation.ReceivedCoins.Select(coin => coin as Coin));
-            }
-            totalBalance.Unconfirmed = unspentCoins.Sum(x => x.Amount.ToDecimal(MoneyUnit.BTC));
-            totalBalance.Unconfirmed = unspentCoinsConfirmed.Sum(x => x.Amount.ToDecimal(MoneyUnit.BTC));
-            return totalBalance;
-        }
+        }      
    
         private async Task UpdateConfirmations(IEnumerable<TransactionModel> transactionModels)
         {
@@ -138,26 +126,32 @@ namespace BitcoinTransfer.Services
             }
         }
 
-        private async Task UpdateBalance(WalletModel fromWallet, WalletModel toWallet, bool testNet = false)
+        private async Task UpdateBalance(WalletModel fromWallet, WalletModel toWallet)
         {
-            var fromWalletBalance = await MssGetBalance(fromWallet.Address, true, testNet);
-            var toWalletBalance = await MssGetBalance(fromWallet.Address, true, testNet);
+            var fromWalletBalance = await GetBalance(fromWallet.Address);
+            var toWalletBalance = await GetBalance(toWallet.Address);
             var balanceChanged = false;
-            if (fromWallet.ConfirmedBalance != fromWalletBalance.Confirmed)
+            if (fromWallet.ConfirmedBalance != fromWalletBalance)
             {
-                fromWallet.ConfirmedBalance = fromWalletBalance.Confirmed;
+                fromWallet.ConfirmedBalance = fromWalletBalance;
                 _walletRepository.Update(fromWallet);
                 balanceChanged = true;
             }
-            if (toWallet.ConfirmedBalance != toWalletBalance.Confirmed)
+            if (toWallet.ConfirmedBalance != toWalletBalance)
             {
-                toWallet.ConfirmedBalance = toWalletBalance.Confirmed;
+                toWallet.ConfirmedBalance = toWalletBalance;
                 _walletRepository.Update(toWallet);
                 balanceChanged = true;
             }
 
             if (balanceChanged)
                 await _walletRepository.SaveAsync();
+        }
+
+        private async Task<decimal> GetBalance(string address)
+        {
+            var balance = await _httpClientService.GetItem<WebModels.BalanceModel>($"balances/{address}/summary");
+            return balance.Confirmed.Amount / Consts.BitcoinScale;
         }
     }
 }

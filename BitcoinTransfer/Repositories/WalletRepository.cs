@@ -16,7 +16,7 @@ namespace BitcoinTransfer.Repositories
 
         public async Task<WalletModel> GetDefaultWalletToSendBitcoins()
         {
-            return await RepositoryContext.Wallets.FindAsync(Consts.defaultAddressIdToGetBitcoins);
+            return await RepositoryContext.Wallets.FindAsync(Consts.DefaultAddressIdToGetBitcoins);
         }
 
         public async Task<WalletModel> GetOrCreate(string address)

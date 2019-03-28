@@ -26,9 +26,9 @@ namespace BitcoinTransfer.Database
             modelBuilder.Entity<WalletModel>().HasData(
                 new WalletModel
                 {
-                    WalletId = Consts.defaultAddressIdToGetBitcoins,
-                    Address = Consts.defaultAddressToGetBitcoin,
-                    PrivateKey = Consts.defaultSecretToGetBitcoin
+                    WalletId = Consts.DefaultAddressIdToGetBitcoins,
+                    Address = Consts.DefaultAddressToGetBitcoin,
+                    PrivateKey = Consts.DefaultSecretToGetBitcoin
                 }
             );
         }
