@@ -118,11 +118,10 @@ namespace BitcoinTransfer.Services
    
         private async Task UpdateConfirmations(IEnumerable<TransactionModel> transactionModels)
         {
-            var client = new QBitNinjaClient(Network.TestNet);
             foreach (var transactionModel in transactionModels)
             {
-                var transaction = await client.GetTransaction(uint256.Parse(transactionModel.TransactionId));
-                transactionModel.Confirmation = transaction.Block.Confirmations;
+                var confirmations = await GetConfirmations(transactionModel.TransactionId);
+                transactionModel.Confirmation = confirmations;
             }
         }
 
@@ -152,6 +151,12 @@ namespace BitcoinTransfer.Services
         {
             var balance = await _httpClientService.GetItem<WebModels.BalanceModel>($"balances/{address}/summary");
             return balance.Confirmed.Amount / Consts.BitcoinScale;
+        }
+
+        private async Task<int> GetConfirmations(string transactionId)
+        {
+            var balance = await _httpClientService.GetItem<WebModels.TransactionModel>($"transactions/{transactionId}?format=json");
+            return balance.Block.Confirmations;
         }
     }
 }
